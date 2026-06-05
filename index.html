@@ -475,13 +475,99 @@
   }
 
   .ticker {
-    margin-top: 7px;
-    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin-top: 9px;
+    padding: 5px 8px;
+    border: 1px solid rgba(92, 201, 255, .22);
+    border-radius: 6px;
+    background: rgba(5, 10, 16, .62);
+    color: #d9f3ff;
     font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .03em;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .04em;
+    line-height: 1.25;
+    text-decoration: none;
     overflow-wrap: anywhere;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+  }
+
+  .ticker:hover {
+    border-color: rgba(92, 201, 255, .52);
+    background: rgba(92, 201, 255, .1);
+    color: #ffffff;
+  }
+
+  .ticker.is-disabled {
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .chart-box {
+    position: relative;
+    z-index: 1;
+    height: 240px;
+    min-width: 0;
+    margin-top: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(157, 178, 207, .14);
+    border-radius: var(--radius);
+    background:
+      linear-gradient(180deg, rgba(8, 12, 18, .96), rgba(6, 9, 14, .94)),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 38px);
+  }
+
+  .tv-chart,
+  .tv-chart > div,
+  .tv-chart iframe {
+    width: 100%;
+    height: 100%;
+  }
+
+  .chart-state {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .chart-fallback {
+    display: grid;
+    gap: 10px;
+    place-items: center;
+    width: 100%;
+  }
+
+  .chart-fallback strong {
+    color: var(--text-soft);
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: .04em;
+  }
+
+  .chart-fallback a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 1px solid rgba(92, 201, 255, .28);
+    border-radius: 999px;
+    color: #bfeaff;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .chart-fallback a:hover {
+    border-color: rgba(92, 201, 255, .55);
+    color: #ffffff;
   }
 
   .market {
@@ -696,6 +782,10 @@
       grid-template-columns: 1fr;
     }
 
+    .chart-box {
+      height: 230px;
+    }
+
     .target-toolbar {
       display: grid;
     }
@@ -736,6 +826,7 @@
     .slogan { font-size: 13px; }
     .mini-stats { grid-template-columns: 1fr; }
     .history-item { grid-template-columns: 1fr; }
+    .chart-box { height: 220px; }
   }
 </style>
 </head>
@@ -827,6 +918,7 @@
       const notes = document.getElementById("notes");
       const history = document.getElementById("history");
       const stats = document.getElementById("stats");
+      const tradingViewScriptUrl = "https://s3.tradingview.com/tv.js";
 
       const statusClasses = {
         "已發生": "status-done",
@@ -841,9 +933,173 @@
       };
 
       let activeIndex = 0;
+      let targetChartObserver = null;
+      let tradingViewScriptPromise = null;
 
       function text(value) {
         return value == null ? "" : String(value);
+      }
+
+      function attr(value) {
+        return text(value)
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function tradingViewSymbol(target) {
+        const market = text(target.market).trim();
+        const ticker = text(target.ticker).trim().toUpperCase();
+        let match;
+
+        if (!ticker || ticker === "—" || ticker === "-") return "";
+
+        if (market === "韓股") {
+          match = ticker.match(/^(\d{6})\.(?:KS|KQ)$/);
+          return match ? "KRX:" + match[1] : "";
+        }
+
+        if (market === "台股") {
+          match = ticker.match(/^(\d+)\.TW$/);
+          if (match) return "TWSE:" + match[1];
+          match = ticker.match(/^(\d+)\.TWO$/);
+          return match ? "TPEX:" + match[1] : "";
+        }
+
+        if (market === "日股") {
+          match = ticker.match(/^(\d+)\.T$/);
+          return match ? "TSE:" + match[1] : "";
+        }
+
+        if (market === "美股") {
+          return /^[A-Z][A-Z0-9-]{0,9}$/.test(ticker) ? ticker : "";
+        }
+
+        return "";
+      }
+
+      function tradingViewUrl(symbol) {
+        return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(symbol);
+      }
+
+      function loadTradingViewScript() {
+        if (window.TradingView && window.TradingView.widget) {
+          return Promise.resolve();
+        }
+
+        if (tradingViewScriptPromise) {
+          return tradingViewScriptPromise;
+        }
+
+        tradingViewScriptPromise = new Promise(function (resolve, reject) {
+          if (navigator.onLine === false) {
+            reject(new Error("offline"));
+            return;
+          }
+
+          const script = document.createElement("script");
+          script.src = tradingViewScriptUrl;
+          script.async = true;
+          script.onload = function () { resolve(); };
+          script.onerror = function () { reject(new Error("TradingView script failed")); };
+          document.head.appendChild(script);
+        });
+
+        return tradingViewScriptPromise;
+      }
+
+      function renderChartFallback(box, message) {
+        const symbol = text(box.dataset.tvSymbol);
+        const ticker = text(box.dataset.ticker);
+        const link = symbol ? tradingViewUrl(symbol) : "";
+
+        box.innerHTML = [
+          "<div class=\"chart-state\">",
+          "  <div class=\"chart-fallback\">",
+          "    <strong>" + attr(ticker || symbol || "N/A") + "</strong>",
+          "    <span>" + attr(message || "無即時報價") + "</span>",
+          link ? "    <a href=\"" + attr(link) + "\" target=\"_blank\" rel=\"noopener noreferrer\">在 TradingView 開啟</a>" : "",
+          "  </div>",
+          "</div>"
+        ].join("");
+      }
+
+      function initChart(box) {
+        const symbol = text(box.dataset.tvSymbol);
+        const containerId = text(box.dataset.containerId);
+        let fallbackTimer;
+
+        if (box.dataset.loaded === "true") return;
+        box.dataset.loaded = "true";
+
+        if (!symbol || !containerId) {
+          renderChartFallback(box, "無即時報價");
+          return;
+        }
+
+        loadTradingViewScript().then(function () {
+          try {
+            if (!window.TradingView || !window.TradingView.widget) {
+              throw new Error("TradingView unavailable");
+            }
+
+            const state = box.querySelector(".chart-state");
+            if (state) state.remove();
+
+            new window.TradingView.widget({
+              container_id: containerId,
+              symbol: symbol,
+              interval: "D",
+              style: "1",
+              theme: "dark",
+              locale: "zh_TW",
+              timezone: "Asia/Taipei",
+              hide_top_toolbar: true,
+              hide_legend: false,
+              allow_symbol_change: false,
+              autosize: true
+            });
+
+            fallbackTimer = window.setTimeout(function () {
+              if (!box.querySelector("iframe")) {
+                renderChartFallback(box, "圖表載入逾時");
+              }
+            }, 12000);
+          } catch (error) {
+            if (fallbackTimer) window.clearTimeout(fallbackTimer);
+            renderChartFallback(box, "圖表載入失敗");
+          }
+        }).catch(function () {
+          renderChartFallback(box, "圖表載入失敗");
+        });
+      }
+
+      function observeCharts() {
+        if (targetChartObserver) {
+          targetChartObserver.disconnect();
+        }
+
+        const chartBoxes = targets.querySelectorAll(".chart-box");
+        if (!chartBoxes.length) return;
+
+        if (!("IntersectionObserver" in window)) {
+          chartBoxes.forEach(initChart);
+          return;
+        }
+
+        targetChartObserver = new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              initChart(entry.target);
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { rootMargin: "180px 0px" });
+
+        chartBoxes.forEach(function (box) {
+          targetChartObserver.observe(box);
+        });
       }
 
       function countBy(items, key) {
@@ -914,16 +1170,19 @@
       }
 
       function renderTargets(entry) {
-        targets.innerHTML = sortedTargets(entry).map(function (target) {
+        targets.innerHTML = sortedTargets(entry).map(function (target, index) {
           const confidenceClass = confidenceClasses[target.confidence] || "confidence-watch";
           const hot = target.confidence === "強" ? " hot" : "";
           const risk = text(target.risk);
+          const symbol = tradingViewSymbol(target);
+          const link = symbol ? tradingViewUrl(symbol) : "";
+          const chartId = "tv-chart-" + activeIndex + "-" + index;
           return [
             "<article class=\"target" + hot + "\">",
             "  <div class=\"target-top\">",
             "    <div>",
             "      <h3 class=\"target-name\">" + text(target.name) + "</h3>",
-            "      <div class=\"ticker\">" + text(target.ticker) + "</div>",
+            link ? "      <a class=\"ticker\" href=\"" + attr(link) + "\" target=\"_blank\" rel=\"noopener noreferrer\">" + text(target.ticker) + "</a>" : "      <span class=\"ticker is-disabled\">" + text(target.ticker) + "</span>",
             "    </div>",
             "    <span class=\"badge market\">" + text(target.market) + "</span>",
             "  </div>",
@@ -931,11 +1190,17 @@
             "    <span class=\"badge " + confidenceClass + "\">信心：" + text(target.confidence) + "</span>",
             "    <span class=\"badge segment\">" + text(target.segment) + "</span>",
             "  </div>",
+            "  <div class=\"chart-box\" data-tv-symbol=\"" + attr(symbol) + "\" data-ticker=\"" + attr(target.ticker) + "\" data-container-id=\"" + attr(chartId) + "\">",
+            symbol ? "    <div class=\"tv-chart\" id=\"" + attr(chartId) + "\"></div>" : "",
+            "    <div class=\"chart-state\">" + (symbol ? "載入即時 K 線..." : "無即時報價") + "</div>",
+            "  </div>",
             "  <div class=\"reason\">" + text(target.reason) + "</div>",
             risk ? "  <div class=\"risk\"><strong>風險：</strong>" + risk + "</div>" : "",
             "</article>"
           ].join("");
         }).join("");
+
+        observeCharts();
 
         const noteText = text(entry.notes);
         notes.style.display = noteText ? "block" : "none";

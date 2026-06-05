@@ -64,9 +64,9 @@ window.PREDICTIONS = [
         risk: "已是巨型股，單一行程難造成大波動，僅供對照。"
       },
       {
-        name: "散熱 / CoWoS 概念（台股）", ticker: "—", market: "台股",
-        segment: "Computex 外溢", confidence: "觀察",
-        reason: "Computex 主題演講主打散熱與 CoWoS，台廠散熱（如 AVC 3017、奇鋐 3017）為延續性題材。",
+        name: "奇鋐 AVC（散熱 / CoWoS 概念）", ticker: "3017.TW", market: "台股",
+        segment: "Computex 外溢 · 散熱代表", confidence: "觀察",
+        reason: "Computex 主題演講主打散熱與 CoWoS，台廠散熱龍頭奇鋐（3017）為延續性題材；同概念可留意雙鴻 3324、CoWoS 本尊台積電 2330。",
         risk: "行程已轉往韓國，台股題材熱度遞減，僅為外溢觀察。"
       }
     ],
