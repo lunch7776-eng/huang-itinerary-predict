@@ -42,8 +42,19 @@
 - 若某題材冒出新的代表性標的，更新 `watchlist_hints`。
 - 更新 `sources.json` 的 `updatedAt`。
 
-### 6. 回報
-簡短回報：今天更新了什麼（新行程？新標的？信心變動？）、來源登記表怎麼調整的。
+### 6. 部署到線上（GitHub Pages）
+這個資料夾本身是 git repo，遠端 origin = https://github.com/lunch7776-eng/huang-itinerary-predict （GitHub Pages：https://lunch7776-eng.github.io/huang-itinerary-predict/ ）。
+資料有更動才推（沒更動就跳過）：
+```
+git -C /Users/lunch/知識筆記/黃仁勳預測站 add data/data.js data/sources.json UPDATE_PLAYBOOK.md
+git -C /Users/lunch/知識筆記/黃仁勳預測站 diff --cached --quiet || \
+git -C /Users/lunch/知識筆記/黃仁勳預測站 -c user.name="lunch7776-eng" -c user.email="lunch7776@gmail.com" commit -q -m "auto-update 預測 $(date '+%Y-%m-%d %H:%M')"
+git -C /Users/lunch/知識筆記/黃仁勳預測站 push -q origin main
+```
+推完約 1 分鐘後線上網站就會更新。
+
+### 7. 回報
+簡短回報：今天更新了什麼（新行程？新標的？信心變動？）、來源登記表怎麼調整的、有沒有 push 到線上。
 
 ## 注意
 - 這是趣味預測實驗，產出非投資建議。資料以公開資訊為準，傳聞必標風險。
