@@ -206,6 +206,26 @@
     content: "";
   }
 
+  .video-wrap {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #05070a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  }
+  .explainer-video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #05070a;
+  }
+  .video-cap {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
   .hero {
     min-height: 302px;
     display: grid;
@@ -853,6 +873,26 @@
             <div class="meta-row" id="focusMeta"></div>
           </div>
         </article>
+
+        <section class="panel" aria-labelledby="videoTitle">
+          <div class="panel-inner">
+            <h2 class="section-kicker" id="videoTitle">影片解說</h2>
+            <div class="video-wrap">
+              <video
+                id="explainerVideo"
+                class="explainer-video"
+                controls
+                playsinline
+                preload="metadata"
+                poster="media/explainer-poster.jpg"
+              >
+                <source src="media/explainer.mp4" type="video/mp4" />
+                你的瀏覽器不支援影片播放，<a href="media/explainer.mp4">點此下載觀看</a>。
+              </video>
+            </div>
+            <p class="video-cap">90 秒看懂這個站在做什麼 · 台灣女聲旁白</p>
+          </div>
+        </section>
 
         <section class="panel" aria-labelledby="timelineTitle">
           <div class="panel-inner">
