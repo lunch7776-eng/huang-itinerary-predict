@@ -1,0 +1,21 @@
+{
+  "_doc": "資訊來源登記表。每次更新後由排程 agent 自我優化：命中好的來源加 weight、失效的降 weight 或移除、發現新好來源就 append。weight 1-10，越高越優先採用。",
+  "updatedAt": "2026-06-05 12:00",
+  "sources": [
+    { "name": "Reuters", "type": "news", "url": "https://www.reuters.com/technology/", "lang": "en", "weight": 8, "covers": ["行程", "供應鏈"], "lastGoodHit": "2026-06-05", "notes": "權威、時效快，行程官宣首選" },
+    { "name": "Korea Times / Korea Herald", "type": "news", "url": "https://www.koreatimes.co.kr", "lang": "en", "weight": 9, "covers": ["韓國行程", "韓股"], "lastGoodHit": "2026-06-05", "notes": "訪韓行程細節最完整" },
+    { "name": "Seoul Economic Daily (sedaily)", "type": "news", "url": "https://en.sedaily.com", "lang": "en", "weight": 9, "covers": ["韓國行程", "韓股", "供應鏈標的"], "lastGoodHit": "2026-06-05", "notes": "曾報導韓國『追蹤黃仁勳行程』網站＋相關概念股" },
+    { "name": "鉅亨網 cnyes", "type": "news", "url": "https://news.cnyes.com", "lang": "zh-TW", "weight": 8, "covers": ["台股", "美股", "供應鏈"], "lastGoodHit": null, "notes": "中文財經、台股供應鏈對應好查" },
+    { "name": "INSIDE", "type": "news", "url": "https://www.inside.com.tw", "lang": "zh-TW", "weight": 6, "covers": ["台灣行程", "科技"], "lastGoodHit": "2026-06-05", "notes": "台灣行程脈絡" },
+    { "name": "NVIDIA Newsroom", "type": "official", "url": "https://nvidianews.nvidia.com", "lang": "en", "weight": 7, "covers": ["官方行程", "合作案"], "lastGoodHit": null, "notes": "官宣最權威但更新慢" },
+    { "name": "Threads / X 爆料帳號", "type": "social", "url": "https://www.threads.net", "lang": "zh-TW", "weight": 4, "covers": ["傳聞行程", "盤中異動"], "lastGoodHit": null, "notes": "時效最快但需標風險旗標、交叉驗證" }
+  ],
+  "watchlist_hints": {
+    "_doc": "依題材快速對應候選標的的線索，供 agent 評分參考；非固定清單。",
+    "HBM/記憶體": ["SK Hynix 000660.KS", "Samsung 005930.KS", "Hanmi Semi 042700.KS"],
+    "人形機器人/Physical AI": ["Rainbow Robotics 277810.KQ", "현대 Boston Dynamics"],
+    "遊戲AI": ["Krafton 259960.KS", "NCsoft 036570.KS"],
+    "CoWoS/散熱(台)": ["AVC 3017.TW", "奇鋐 3017", "台積電 2330.TW"],
+    "AI晶片本尊": ["NVDA"]
+  }
+}

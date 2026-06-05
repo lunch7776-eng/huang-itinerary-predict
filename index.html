@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>黃仁勳行程預測站</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #080b10;
+    --bg-2: #0d121a;
+    --panel: rgba(16, 22, 31, .82);
+    --panel-solid: #111821;
+    --panel-strong: #151e2a;
+    --line: rgba(157, 178, 207, .16);
+    --line-strong: rgba(157, 178, 207, .28);
+    --text: #f2f6fb;
+    --text-soft: #c9d3df;
+    --muted: #8290a3;
+    --muted-2: #617083;
+    --green: #76b900;
+    --green-2: #9de15b;
+    --cyan: #5cc9ff;
+    --amber: #ffbd4a;
+    --red: #ff6678;
+    --violet: #a98cff;
+    --shadow: 0 24px 70px rgba(0, 0, 0, .38);
+    --radius: 8px;
+    --mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", ui-monospace, monospace;
+    --sans: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 16% -6%, rgba(118, 185, 0, .18), transparent 31rem),
+      radial-gradient(circle at 86% 12%, rgba(92, 201, 255, .11), transparent 28rem),
+      linear-gradient(180deg, #090d13 0%, var(--bg) 48%, #07090d 100%);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .026) 1px, transparent 1px);
+    background-size: 68px 68px;
+    mask-image: linear-gradient(to bottom, black, transparent 75%);
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  .shell {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 32px 0 42px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 0 26px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(118, 185, 0, .5);
+    border-radius: var(--radius);
+    background:
+      linear-gradient(135deg, rgba(118, 185, 0, .28), rgba(92, 201, 255, .08)),
+      rgba(9, 15, 20, .86);
+    box-shadow: 0 0 30px rgba(118, 185, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .11);
+    color: var(--green-2);
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: .04em;
+  }
+
+  .brand-text { min-width: 0; }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(24px, 3vw, 40px);
+    line-height: 1.1;
+    letter-spacing: 0;
+    font-weight: 900;
+  }
+
+  .slogan {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .updated {
+    flex: none;
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(13, 18, 26, .72);
+    color: var(--text-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .updated span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .main,
+  .rail {
+    display: grid;
+    gap: 18px;
+  }
+
+  .panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(20, 29, 40, .88), rgba(12, 17, 25, .88));
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .05);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: enter .55s ease forwards;
+  }
+
+  .panel:nth-child(2) { animation-delay: .06s; }
+  .panel:nth-child(3) { animation-delay: .12s; }
+  .rail .panel { animation-delay: .18s; }
+
+  @keyframes enter {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-inner {
+    position: relative;
+    z-index: 1;
+    padding: clamp(18px, 2.2vw, 28px);
+  }
+
+  .section-kicker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .section-kicker::before {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 18px rgba(118, 185, 0, .65);
+    content: "";
+  }
+
+  .hero {
+    min-height: 302px;
+    display: grid;
+    align-items: end;
+    background:
+      linear-gradient(105deg, rgba(8, 11, 16, .2), rgba(8, 11, 16, .82) 70%),
+      linear-gradient(135deg, rgba(118, 185, 0, .16), rgba(92, 201, 255, .07));
+  }
+
+  .hero::before {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background:
+      linear-gradient(90deg, transparent 0 58%, rgba(118, 185, 0, .16) 58% 59%, transparent 59%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 42px);
+    opacity: .35;
+  }
+
+  .hero-title {
+    max-width: 850px;
+    margin: 0;
+    font-size: clamp(30px, 5.2vw, 62px);
+    line-height: 1.08;
+    letter-spacing: 0;
+    font-weight: 900;
+  }
+
+  .summary {
+    max-width: 850px;
+    margin-top: 18px;
+    color: var(--text-soft);
+    font-size: clamp(15px, 1.5vw, 17px);
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .035);
+    color: var(--text-soft);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .chip::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+  }
+
+  .timeline {
+    display: grid;
+    gap: 0;
+  }
+
+  .event {
+    position: relative;
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 24px;
+    padding: 3px 0 24px;
+  }
+
+  .event:last-child { padding-bottom: 0; }
+
+  .event::before {
+    position: absolute;
+    top: 7px;
+    bottom: -7px;
+    left: 148px;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(118, 185, 0, .65), rgba(157, 178, 207, .1));
+    content: "";
+  }
+
+  .event:last-child::before { display: none; }
+
+  .event::after {
+    position: absolute;
+    top: 7px;
+    left: 143px;
+    width: 11px;
+    height: 11px;
+    border: 2px solid rgba(118, 185, 0, .86);
+    border-radius: 50%;
+    background: #0b1118;
+    box-shadow: 0 0 0 5px rgba(118, 185, 0, .09), 0 0 24px rgba(118, 185, 0, .36);
+    content: "";
+  }
+
+  .event-time {
+    color: var(--green-2);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .event-place {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .event-card {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid rgba(157, 178, 207, .14);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, .035);
+    transition: border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+
+  .event-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(118, 185, 0, .34);
+    background: rgba(255, 255, 255, .052);
+  }
+
+  .event-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .event-target {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .event-theme {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    padding: 4px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .status-done {
+    border-color: rgba(92, 201, 255, .34);
+    background: rgba(92, 201, 255, .11);
+    color: var(--cyan);
+  }
+
+  .status-official {
+    border-color: rgba(118, 185, 0, .38);
+    background: rgba(118, 185, 0, .13);
+    color: var(--green-2);
+  }
+
+  .status-rumor {
+    border-color: rgba(255, 189, 74, .42);
+    background: rgba(255, 189, 74, .12);
+    color: var(--amber);
+  }
+
+  .target-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  .target-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .target {
+    position: relative;
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid rgba(157, 178, 207, .16);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .052), rgba(255, 255, 255, .028));
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+
+  .target:hover {
+    transform: translateY(-2px);
+    border-color: rgba(157, 178, 207, .32);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .068), rgba(255, 255, 255, .035));
+  }
+
+  .target.hot {
+    border-color: rgba(118, 185, 0, .55);
+    box-shadow: 0 0 0 1px rgba(118, 185, 0, .1), 0 18px 52px rgba(118, 185, 0, .1);
+  }
+
+  .target.hot::before {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    content: "";
+    background: linear-gradient(135deg, rgba(118, 185, 0, .15), transparent 42%);
+  }
+
+  .target-top,
+  .target-tags {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .target-name {
+    min-width: 0;
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.35;
+    font-weight: 900;
+  }
+
+  .ticker {
+    margin-top: 7px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    overflow-wrap: anywhere;
+  }
+
+  .market {
+    flex: none;
+    border-color: rgba(157, 178, 207, .18);
+    background: rgba(255, 255, 255, .048);
+    color: var(--text-soft);
+  }
+
+  .target-tags {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 13px;
+  }
+
+  .segment {
+    max-width: 100%;
+    border-color: rgba(92, 201, 255, .22);
+    background: rgba(92, 201, 255, .07);
+    color: #bfeaff;
+  }
+
+  .confidence-strong {
+    border-color: rgba(118, 185, 0, .55);
+    background: rgba(118, 185, 0, .18);
+    color: var(--green-2);
+    box-shadow: 0 0 22px rgba(118, 185, 0, .16);
+  }
+
+  .confidence-mid {
+    border-color: rgba(92, 201, 255, .38);
+    background: rgba(92, 201, 255, .12);
+    color: var(--cyan);
+  }
+
+  .confidence-watch {
+    border-color: rgba(169, 140, 255, .34);
+    background: rgba(169, 140, 255, .1);
+    color: #c7b8ff;
+  }
+
+  .reason,
+  .risk,
+  .note-box {
+    position: relative;
+    z-index: 1;
+  }
+
+  .reason {
+    margin-top: 14px;
+    color: var(--text-soft);
+    font-size: 14px;
+  }
+
+  .risk {
+    margin-top: 12px;
+    padding: 10px 11px;
+    border: 1px solid rgba(255, 189, 74, .24);
+    border-radius: var(--radius);
+    background: rgba(255, 189, 74, .08);
+    color: #ffd995;
+    font-size: 13px;
+  }
+
+  .risk strong {
+    color: var(--amber);
+  }
+
+  .note-box {
+    display: none;
+    margin-top: 16px;
+    padding: 13px 14px;
+    border: 1px solid rgba(118, 185, 0, .24);
+    border-radius: var(--radius);
+    background: rgba(118, 185, 0, .07);
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+
+  .history-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .history-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease;
+  }
+
+  .history-item:hover,
+  .history-item.is-active {
+    border-color: rgba(118, 185, 0, .28);
+    background: rgba(118, 185, 0, .075);
+  }
+
+  .history-date {
+    color: var(--green-2);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .history-headline {
+    color: var(--text-soft);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .history-empty {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .mini-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .stat {
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, .035);
+  }
+
+  .stat-value {
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .stat-label {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .disclaimer {
+    margin-top: 18px;
+    padding: 18px 4px 0;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .disclaimer strong {
+    color: var(--amber);
+  }
+
+  .empty {
+    padding: 26px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    color: var(--text-soft);
+  }
+
+  @media (max-width: 960px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .rail {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    .shell {
+      width: min(100% - 28px, 1180px);
+      padding-top: 18px;
+    }
+
+    .topbar {
+      display: grid;
+      gap: 14px;
+      padding-bottom: 18px;
+    }
+
+    .updated {
+      width: 100%;
+      white-space: normal;
+    }
+
+    .hero {
+      min-height: 360px;
+    }
+
+    .hero-title {
+      font-size: clamp(28px, 10vw, 44px);
+    }
+
+    .target-grid,
+    .rail {
+      grid-template-columns: 1fr;
+    }
+
+    .target-toolbar {
+      display: grid;
+    }
+
+    .event {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding-left: 24px;
+    }
+
+    .event::before {
+      left: 5px;
+      top: 8px;
+    }
+
+    .event::after {
+      left: 0;
+      top: 8px;
+    }
+
+    .event-head,
+    .target-top {
+      display: grid;
+      justify-content: stretch;
+    }
+
+    .event-head .badge,
+    .target-top .badge {
+      justify-self: start;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .shell { width: min(100% - 20px, 1180px); }
+    .panel-inner { padding: 16px; }
+    .brand { align-items: flex-start; }
+    .mark { width: 42px; height: 42px; }
+    .slogan { font-size: 13px; }
+    .mini-stats { grid-template-columns: 1fr; }
+    .history-item { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar" aria-label="頁首">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">AI</div>
+        <div class="brand-text">
+          <h1>黃仁勳行程預測站</h1>
+          <div class="slogan">他飛到哪 · 哪支供應鏈標的可能被點火</div>
+        </div>
+      </div>
+      <div class="updated" id="updated"><span>最後更新</span>讀取中</div>
+    </header>
+
+    <div class="layout" id="app" hidden>
+      <section class="main" aria-label="主要內容">
+        <article class="panel hero" aria-labelledby="headline">
+          <div class="panel-inner">
+            <p class="section-kicker">今日焦點</p>
+            <h2 class="hero-title" id="headline"></h2>
+            <p class="summary" id="summary"></p>
+            <div class="meta-row" id="focusMeta"></div>
+          </div>
+        </article>
+
+        <section class="panel" aria-labelledby="timelineTitle">
+          <div class="panel-inner">
+            <h2 class="section-kicker" id="timelineTitle">行程時間軸</h2>
+            <div class="timeline" id="timeline"></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="targetsTitle">
+          <div class="panel-inner">
+            <div class="target-toolbar">
+              <h2 class="section-kicker" id="targetsTitle">預測標的</h2>
+              <div class="legend" aria-label="信心分級圖例">
+                <span class="legend-item"><span class="legend-dot" style="background: var(--green-2);"></span>強：催化明確</span>
+                <span class="legend-item"><span class="legend-dot" style="background: var(--cyan);"></span>中：直接受惠</span>
+                <span class="legend-item"><span class="legend-dot" style="background: var(--violet);"></span>觀察：待確認</span>
+              </div>
+            </div>
+            <div class="target-grid" id="targets"></div>
+            <div class="note-box" id="notes"></div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="rail" aria-label="側欄">
+        <section class="panel" aria-labelledby="statsTitle">
+          <div class="panel-inner">
+            <h2 class="section-kicker" id="statsTitle">戰情概覽</h2>
+            <div class="mini-stats" id="stats"></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="historyTitle">
+          <div class="panel-inner">
+            <h2 class="section-kicker" id="historyTitle">歷史預測</h2>
+            <div class="history-list" id="history"></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="empty" id="empty" hidden>尚無資料，請先確認 data/data.js 已設定 window.PREDICTIONS。</div>
+
+    <footer class="disclaimer">
+      <strong>免責聲明：</strong>本站內容為公開行程與供應鏈題材推演，非投資建議，不保證準確，投資自負盈虧。
+    </footer>
+  </main>
+
+  <script src="data/data.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const predictions = Array.isArray(window.PREDICTIONS) ? window.PREDICTIONS : [];
+      const app = document.getElementById("app");
+      const empty = document.getElementById("empty");
+      const updated = document.getElementById("updated");
+      const headline = document.getElementById("headline");
+      const summary = document.getElementById("summary");
+      const focusMeta = document.getElementById("focusMeta");
+      const timeline = document.getElementById("timeline");
+      const targets = document.getElementById("targets");
+      const notes = document.getElementById("notes");
+      const history = document.getElementById("history");
+      const stats = document.getElementById("stats");
+
+      const statusClasses = {
+        "已發生": "status-done",
+        "官宣": "status-official",
+        "傳聞": "status-rumor"
+      };
+
+      const confidenceClasses = {
+        "強": "confidence-strong",
+        "中": "confidence-mid",
+        "觀察": "confidence-watch"
+      };
+
+      let activeIndex = 0;
+
+      function text(value) {
+        return value == null ? "" : String(value);
+      }
+
+      function countBy(items, key) {
+        return items.reduce(function (acc, item) {
+          const value = text(item[key]) || "未分類";
+          acc[value] = (acc[value] || 0) + 1;
+          return acc;
+        }, {});
+      }
+
+      function topMarkets(items) {
+        const counts = countBy(items, "market");
+        return Object.keys(counts).map(function (name) {
+          return name + " " + counts[name];
+        }).join(" · ");
+      }
+
+      function renderMeta(entry) {
+        const strongCount = entry.targets.filter(function (target) {
+          return target.confidence === "強";
+        }).length;
+        focusMeta.innerHTML = [
+          "<span class=\"chip\">" + entry.itinerary.length + " 段行程</span>",
+          "<span class=\"chip\">" + entry.targets.length + " 個標的</span>",
+          "<span class=\"chip\">" + strongCount + " 個強信心</span>",
+          "<span class=\"chip\">" + topMarkets(entry.targets) + "</span>"
+        ].join("");
+      }
+
+      function renderStats(entry) {
+        const confidence = countBy(entry.targets, "confidence");
+        stats.innerHTML = [
+          { value: entry.itinerary.length, label: "行程節點" },
+          { value: entry.targets.length, label: "追蹤標的" },
+          { value: confidence["強"] || 0, label: "強信心" },
+          { value: Object.keys(countBy(entry.targets, "market")).length, label: "涵蓋市場" }
+        ].map(function (item) {
+          return "<div class=\"stat\"><div class=\"stat-value\">" + item.value + "</div><div class=\"stat-label\">" + item.label + "</div></div>";
+        }).join("");
+      }
+
+      function renderTimeline(entry) {
+        timeline.innerHTML = entry.itinerary.map(function (event) {
+          const statusClass = statusClasses[event.status] || "status-rumor";
+          return [
+            "<article class=\"event\">",
+            "  <div>",
+            "    <div class=\"event-time\">" + text(event.date) + "</div>",
+            "    <div class=\"event-place\">" + text(event.country) + " · " + text(event.city) + "</div>",
+            "  </div>",
+            "  <div class=\"event-card\">",
+            "    <div class=\"event-head\">",
+            "      <div class=\"event-target\">" + text(event.target) + "</div>",
+            "      <span class=\"badge " + statusClass + "\">" + text(event.status) + "</span>",
+            "    </div>",
+            "    <div class=\"event-theme\">題材：" + text(event.theme) + "</div>",
+            "  </div>",
+            "</article>"
+          ].join("");
+        }).join("");
+      }
+
+      function sortedTargets(entry) {
+        const rank = { "強": 0, "中": 1, "觀察": 2 };
+        return entry.targets.slice().sort(function (a, b) {
+          return (rank[a.confidence] ?? 9) - (rank[b.confidence] ?? 9);
+        });
+      }
+
+      function renderTargets(entry) {
+        targets.innerHTML = sortedTargets(entry).map(function (target) {
+          const confidenceClass = confidenceClasses[target.confidence] || "confidence-watch";
+          const hot = target.confidence === "強" ? " hot" : "";
+          const risk = text(target.risk);
+          return [
+            "<article class=\"target" + hot + "\">",
+            "  <div class=\"target-top\">",
+            "    <div>",
+            "      <h3 class=\"target-name\">" + text(target.name) + "</h3>",
+            "      <div class=\"ticker\">" + text(target.ticker) + "</div>",
+            "    </div>",
+            "    <span class=\"badge market\">" + text(target.market) + "</span>",
+            "  </div>",
+            "  <div class=\"target-tags\">",
+            "    <span class=\"badge " + confidenceClass + "\">信心：" + text(target.confidence) + "</span>",
+            "    <span class=\"badge segment\">" + text(target.segment) + "</span>",
+            "  </div>",
+            "  <div class=\"reason\">" + text(target.reason) + "</div>",
+            risk ? "  <div class=\"risk\"><strong>風險：</strong>" + risk + "</div>" : "",
+            "</article>"
+          ].join("");
+        }).join("");
+
+        const noteText = text(entry.notes);
+        notes.style.display = noteText ? "block" : "none";
+        notes.textContent = noteText ? "備註：" + noteText : "";
+      }
+
+      function renderHistory() {
+        if (predictions.length <= 1) {
+          history.innerHTML = "<div class=\"history-empty\">目前只有今天這筆，之後會累積。</div>";
+          return;
+        }
+
+        history.innerHTML = predictions.map(function (entry, index) {
+          const active = index === activeIndex ? " is-active" : "";
+          return [
+            "<button class=\"history-item" + active + "\" type=\"button\" data-index=\"" + index + "\">",
+            "  <span class=\"history-date\">" + text(entry.date) + "</span>",
+            "  <span class=\"history-headline\">" + text(entry.headline) + "</span>",
+            "</button>"
+          ].join("");
+        }).join("");
+
+        history.querySelectorAll(".history-item").forEach(function (button) {
+          button.addEventListener("click", function () {
+            const index = Number(button.dataset.index);
+            if (!Number.isNaN(index) && predictions[index]) {
+              activeIndex = index;
+              render(predictions[index]);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          });
+        });
+      }
+
+      function render(entry) {
+        updated.innerHTML = "<span>最後更新</span>" + text(entry.updatedAt || entry.date);
+        headline.textContent = text(entry.headline);
+        summary.textContent = text(entry.summary);
+        renderMeta(entry);
+        renderStats(entry);
+        renderTimeline(entry);
+        renderTargets(entry);
+        renderHistory();
+      }
+
+      if (!predictions.length) {
+        empty.hidden = false;
+        updated.innerHTML = "<span>最後更新</span>無資料";
+        return;
+      }
+
+      app.hidden = false;
+      render(predictions[0]);
+    })();
+  </script>
+</body>
+</html>
