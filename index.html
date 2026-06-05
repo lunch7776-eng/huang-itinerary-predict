@@ -529,7 +529,9 @@
   .chart-box {
     position: relative;
     z-index: 1;
-    height: 240px;
+    display: flex;
+    flex-direction: column;
+    height: 248px;
     min-width: 0;
     margin-top: 15px;
     overflow: hidden;
@@ -539,6 +541,20 @@
       linear-gradient(180deg, rgba(8, 12, 18, .96), rgba(6, 9, 14, .94)),
       repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 38px);
   }
+  .chart-quote {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 13px 7px;
+    border-bottom: 1px solid rgba(157, 178, 207, .1);
+    font-family: var(--mono);
+  }
+  .chart-quote .cq-price { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: .02em; }
+  .chart-quote .cq-cur { font-size: 11px; color: var(--muted); }
+  .chart-quote .cq-chg { margin-left: auto; font-size: 14px; font-weight: 700; }
+  .chart-quote .cq-chg.up { color: var(--green-2); }
+  .chart-quote .cq-chg.dn { color: var(--red); }
+  .chart-canvas { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; }
 
   .tv-chart,
   .tv-chart > div,
@@ -944,6 +960,7 @@
     </footer>
   </main>
 
+  <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
   <script src="data/data.js"></script>
   <script>
     (function () {
@@ -1068,70 +1085,113 @@
         ].join("");
       }
 
+      const CORS_PROXY = "https://corsproxy.io/?url=";
+
+      function yahooSymbol(target) {
+        const tk = text(target.ticker).trim();
+        if (!tk || tk === "—" || tk === "-") return "";
+        return tk; // Yahoo Finance uses .KS / .KQ / .TW / bare US directly
+      }
+
+      function fmtPrice(v, cur) {
+        if (v == null || isNaN(v)) return "--";
+        if (cur === "USD") return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return Math.round(v).toLocaleString("en-US"); // KRW / TWD as integer
+      }
+
+      // Render candlesticks from real Yahoo Finance data (via CORS proxy) using the
+      // open-source TradingView Lightweight Charts library. Works for KR / TW / US —
+      // unlike the TradingView embed widget, which is licence-blocked for KRX/TWSE.
       function initChart(box) {
         if (box.dataset.loaded === "true") return;
         box.dataset.loaded = "true";
 
-        const symbol = text(box.dataset.tvSymbol);
-
-        if (!symbol) {
-          renderChartFallback(box, "無即時報價");
-          return;
-        }
-        if (navigator.onLine === false) {
-          renderChartFallback(box, "離線中");
-          return;
+        const yahoo = text(box.dataset.yahoo);
+        if (!yahoo) { renderChartFallback(box, "無即時報價"); return; }
+        if (navigator.onLine === false) { renderChartFallback(box, "離線中"); return; }
+        if (!(window.LightweightCharts && window.LightweightCharts.createChart)) {
+          renderChartFallback(box, "圖表元件載入失敗"); return;
         }
 
-        // Official TradingView Advanced Chart embed (one self-contained script per widget).
-        try {
-          const container = document.createElement("div");
-          container.className = "tradingview-widget-container";
-          const widget = document.createElement("div");
-          widget.className = "tradingview-widget-container__widget";
-          container.appendChild(widget);
+        const api = "https://query1.finance.yahoo.com/v8/finance/chart/" +
+          encodeURIComponent(yahoo) + "?range=6mo&interval=1d";
 
-          const script = document.createElement("script");
-          script.type = "text/javascript";
-          script.async = true;
-          script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-          script.text = JSON.stringify({
-            symbol: symbol,
-            interval: "D",
-            timezone: "Asia/Taipei",
-            theme: "dark",
-            style: "1",
-            locale: "zh_TW",
-            hide_top_toolbar: true,
-            hide_legend: false,
-            allow_symbol_change: false,
-            save_image: false,
-            autosize: true
-          });
-          script.onerror = function () { renderChartFallback(box, "圖表載入失敗"); };
-          container.appendChild(script);
+        fetch(CORS_PROXY + encodeURIComponent(api)).then(function (r) {
+          if (!r.ok) throw new Error("http " + r.status);
+          return r.json();
+        }).then(function (j) {
+          const res = j && j.chart && j.chart.result && j.chart.result[0];
+          if (!res || !res.timestamp) throw new Error("no data");
+          const ts = res.timestamp;
+          const q = res.indicators.quote[0];
+          const bars = [];
+          for (let i = 0; i < ts.length; i++) {
+            if (q.close[i] == null || q.open[i] == null) continue;
+            const d = new Date(ts[i] * 1000);
+            const ds = d.getUTCFullYear() + "-" +
+              String(d.getUTCMonth() + 1).padStart(2, "0") + "-" +
+              String(d.getUTCDate()).padStart(2, "0");
+            bars.push({ time: ds, open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i] });
+          }
+          if (bars.length < 2) throw new Error("empty");
+
+          const cur = (res.meta && res.meta.currency) || "";
+          const last = bars[bars.length - 1].close;
+          const prev = bars[bars.length - 2].close;
+          const chg = prev ? (last - prev) / prev * 100 : 0;
+          const up = chg >= 0;
 
           box.innerHTML = "";
-          box.appendChild(container);
+          const quote = document.createElement("div");
+          quote.className = "chart-quote";
+          quote.innerHTML =
+            "<span class=\"cq-price\">" + fmtPrice(last, cur) + "</span>" +
+            "<span class=\"cq-cur\">" + attr(cur) + "</span>" +
+            "<span class=\"cq-chg " + (up ? "up" : "dn") + "\">" + (up ? "▲ +" : "▼ ") + chg.toFixed(2) + "%</span>";
+          const canvas = document.createElement("div");
+          canvas.className = "chart-canvas";
+          box.appendChild(quote);
+          box.appendChild(canvas);
 
-          window.setTimeout(function () {
-            if (!box.querySelector("iframe")) {
-              renderChartFallback(box, "圖表載入逾時");
-            }
-          }, 14000);
-        } catch (error) {
-          renderChartFallback(box, "圖表載入失敗");
-        }
+          const w = canvas.clientWidth || box.clientWidth;
+          const h = canvas.clientHeight || (box.clientHeight - 36);
+          const chart = window.LightweightCharts.createChart(canvas, {
+            width: w, height: h,
+            layout: { background: { color: "transparent" }, textColor: "#8290a3", fontFamily: "inherit" },
+            grid: { vertLines: { color: "rgba(157,178,207,.05)" }, horzLines: { color: "rgba(157,178,207,.05)" } },
+            rightPriceScale: { borderColor: "rgba(157,178,207,.12)" },
+            timeScale: { borderColor: "rgba(157,178,207,.12)" },
+            handleScroll: false, handleScale: false,
+            crosshair: { mode: 0 }
+          });
+          const series = chart.addCandlestickSeries({
+            upColor: "#76b900", downColor: "#ff6678",
+            borderUpColor: "#76b900", borderDownColor: "#ff6678",
+            wickUpColor: "#76b900", wickDownColor: "#ff6678"
+          });
+          series.setData(bars);
+          chart.timeScale().fitContent();
+
+          if (window.ResizeObserver) {
+            const ro = new ResizeObserver(function () {
+              if (canvas.clientWidth && canvas.clientHeight) {
+                chart.resize(canvas.clientWidth, canvas.clientHeight);
+                chart.timeScale().fitContent();
+              }
+            });
+            ro.observe(canvas);
+          }
+        }).catch(function () {
+          renderChartFallback(box, "即時報價載入失敗");
+        });
       }
 
       function observeCharts() {
         const chartBoxes = targets.querySelectorAll(".chart-box");
         if (!chartBoxes.length) return;
-
-        // Eager, staggered init — every chart loads regardless of scroll position.
-        // (Lazy IntersectionObserver left most charts stuck on the placeholder.)
+        // Eager, staggered fetch — every chart loads regardless of scroll position.
         chartBoxes.forEach(function (box, i) {
-          window.setTimeout(function () { initChart(box); }, i * 350);
+          window.setTimeout(function () { initChart(box); }, i * 450);
         });
       }
 
@@ -1209,7 +1269,7 @@
           const risk = text(target.risk);
           const symbol = tradingViewSymbol(target);
           const link = symbol ? tradingViewUrl(symbol) : "";
-          const chartId = "tv-chart-" + activeIndex + "-" + index;
+          const yahoo = yahooSymbol(target);
           return [
             "<article class=\"target" + hot + "\">",
             "  <div class=\"target-top\">",
@@ -1223,9 +1283,8 @@
             "    <span class=\"badge " + confidenceClass + "\">信心：" + text(target.confidence) + "</span>",
             "    <span class=\"badge segment\">" + text(target.segment) + "</span>",
             "  </div>",
-            "  <div class=\"chart-box\" data-tv-symbol=\"" + attr(symbol) + "\" data-ticker=\"" + attr(target.ticker) + "\" data-container-id=\"" + attr(chartId) + "\">",
-            symbol ? "    <div class=\"tv-chart\" id=\"" + attr(chartId) + "\"></div>" : "",
-            "    <div class=\"chart-state\">" + (symbol ? "載入即時 K 線..." : "無即時報價") + "</div>",
+            "  <div class=\"chart-box\" data-yahoo=\"" + attr(yahoo) + "\" data-tv-symbol=\"" + attr(symbol) + "\" data-ticker=\"" + attr(target.ticker) + "\">",
+            "    <div class=\"chart-state\">" + (yahoo ? "載入即時報價..." : "無即時報價") + "</div>",
             "  </div>",
             "  <div class=\"reason\">" + text(target.reason) + "</div>",
             risk ? "  <div class=\"risk\"><strong>風險：</strong>" + risk + "</div>" : "",
